@@ -33,18 +33,3 @@ Es gibt vier Level. Das letzte ist ein Team-Einsatz mit allen dreien. Am Ende er
 | `docs/PROMPT.md` | Beschreibung bzw. Prompt, mit dem sich das Spiel nachbauen lässt |
 | `LICENSE` | MIT-Lizenz für den Code des Spiels |
 | `.nojekyll` | sorgt dafür, dass GitHub Pages die Dateien unverändert ausliefert |
-
-## Hinweise
-
-- **Browser:** Läuft in aktuellen Versionen von Chrome, Edge, Firefox und Safari, auch auf Smartphones im Hoch- und Querformat. WebGL wird benötigt.
-- **Ton:** Musik und Sprachausgabe starten nach dem ersten Klick, weil Browser Ton vorher blockieren. Oben rechts lässt sich der Ton ein- und ausschalten.
-- **Stimmen:** Das Spiel nutzt die Sprachausgabe des Browsers und wählt nur hochdeutsche Stimmen. Am natürlichsten klingt es in Microsoft Edge („Natural“-Stimmen) und in Chrome („Google Deutsch“).
-- **Logo und QR-Code ändern:** Beide sind als Base64-Bilder in `index.html` eingebettet. Zum Austauschen in `index.html` nach `data:image/png;base64` suchen. Das erste Vorkommen ist das Logo, das zweite der QR-Code. Den jeweiligen Wert durch das neue Bild ersetzen, ebenfalls als Base64-PNG.
-
-## Lizenz
-
-Der Code des Spiels steht unter der **MIT-Lizenz** (siehe [`LICENSE`](LICENSE)).
-
-**Ausgenommen** davon sind das Logo der SmartFactory KL und der Bewerbungs-QR-Code, im Ordner `assets/` und eingebettet in `index.html`. Beide bleiben Eigentum der Technologie-Initiative SmartFactory KL e.V. und dürfen nicht ohne Erlaubnis weiterverwendet werden. Wer das Spiel für eigene Zwecke anpasst, ersetzt Logo und QR-Code bitte durch eigene.
-
-Die mitgelieferte 3D-Bibliothek three.js steht ebenfalls unter der MIT-Lizenz, © three.js authors (siehe `vendor/three-LICENSE.txt`).
