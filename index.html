@@ -640,15 +640,29 @@ const Music=(()=>{
           const comp=ctx.createDynamicsCompressor(); bus=ctx.createGain(); bus.gain.value=1;
           bus.connect(lp); lp.connect(comp); comp.connect(master); master.connect(ctx.destination);
           noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate); const d=noise.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }
-        ctx.resume(); if(!timer){ next=ctx.currentTime+.08; timer=setInterval(tick,30); }
+        if(ctx.state!=='running'){ const r=ctx.resume(); if(r&&r.catch) r.catch(()=>{}); }
+        // iOS/Android unlock: a silent buffer played inside the user gesture
+        try{ const sb=ctx.createBufferSource(); sb.buffer=ctx.createBuffer(1,1,22050); sb.connect(ctx.destination); sb.start(0); }catch(e){}
+        if(!timer){ next=ctx.currentTime+.08; timer=setInterval(tick,30); }
         master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(ducked?VOL*.35:VOL,ctx.currentTime,.6);
       }catch(e){} },
     stop(){ if(!ctx) return; clearInterval(timer); timer=null; master.gain.setTargetAtTime(0,ctx.currentTime,.15); },
+    running(){ return !!ctx && ctx.state==='running'; },
+    resync(){ if(ctx && timer) next=Math.max(next, ctx.currentTime+.05); },
     duck(on){ ducked=on; if(ctx&&timer) master.gain.setTargetAtTime(on?VOL*.35:VOL,ctx.currentTime,.12); }
   };
 })();
-const kickOff=()=>{ Voice.unlock(); Music.start(); removeEventListener('pointerdown',kickOff); removeEventListener('keydown',kickOff); };
-addEventListener('pointerdown',kickOff); addEventListener('keydown',kickOff);
+// Mobile browsers only allow audio to start inside a real tap/click (pointerdown is not enough on iOS).
+// So every tap tries again until the music is actually running.
+let voiceUnlocked=false;
+const kickOff=()=>{
+  if(!voiceUnlocked){ voiceUnlocked=true; Voice.unlock(); }
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}   // iOS: play even with the silent switch on
+  if(sound.on && !Music.running()){ Music.start(); Music.resync(); }
+};
+['pointerdown','pointerup','touchend','click','keydown'].forEach(ev=>addEventListener(ev,kickOff,{capture:true,passive:true}));
+// back from another app/tab: music may have been suspended
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && sound.on){ Music.start(); Music.resync(); } });
 $('#snd').addEventListener('click',()=>{ sound.on=!sound.on; const b=$('#snd'); b.setAttribute('aria-pressed',sound.on); b.setAttribute('aria-label',sound.on?'Ton aus':'Ton an');
   if(sound.on){ Music.start(); } else { Music.stop(); Voice.stop(); } });
 
