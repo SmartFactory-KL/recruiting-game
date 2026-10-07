@@ -169,6 +169,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   #qrMini img{width:56px;height:56px}
   #qrMini span{font-size:.5rem}
 }
+a.qrInline{display:none}
+@media (max-width:1100px) and (min-height:501px), (max-width:540px), (max-height:500px) and (orientation:landscape){
+  #qrMini{display:none!important}
+  a.qrInline{display:flex;flex:none;flex-direction:column;align-items:center;gap:1px;background:#fff;border-radius:9px;padding:4px 4px 2px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  a.qrInline img{width:58px;height:58px;display:block}
+  a.qrInline span{font-family:var(--display);font-weight:700;font-size:.5rem;color:#004f9f;line-height:1.1;white-space:nowrap}
+  #sheet .row:has(> a.qrInline){flex-wrap:nowrap;align-items:center}
+}
 #aiNote{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:4;pointer-events:none;
   font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;color:var(--muted);background:rgba(20,27,34,.78);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
 /* if the task panel would cover the corner (narrow screens), the note moves under the header */
@@ -1429,6 +1437,17 @@ function placeQrMini(){
 addEventListener('resize',placeQrMini); addEventListener('orientationchange',()=>setTimeout(placeQrMini,300));
 if(window.ResizeObserver) new ResizeObserver(placeQrMini).observe(document.getElementById('hud'));
 placeQrMini(); setTimeout(placeQrMini,1500);
+// put a small, tappable application code next to the main button of the task panel (phones and tablets)
+const QR_SRC=document.querySelector('#apply .qr').src;
+function addInlineQr(){
+  const row=[...sheet.querySelectorAll('.row')].find(r=>r.querySelector(':scope > .btn:not(.ghost)'));
+  if(!row || row.querySelector('.qrInline')) return;
+  const a=document.createElement('a'); a.className='qrInline'; a.href='https://smartfactory.de/karriere/'; a.target='_blank'; a.rel='noopener';
+  a.setAttribute('aria-label','Jetzt bewerben: Karriereseite der SmartFactory KL');
+  a.innerHTML='<img alt="" src="'+QR_SRC+'"><span>Jetzt bewerben</span>';
+  row.appendChild(a);
+}
+new MutationObserver(addInlineQr).observe(sheet,{childList:true}); addInlineQr();
 function showApply(){ if(G.phase!=='result') return; const a=$('#apply'); a.classList.add('on'); a.setAttribute('aria-hidden','false'); }
 function hideApply(){ const a=$('#apply'); a.classList.remove('on'); a.setAttribute('aria-hidden','true'); }
 function stepAll(){ document.querySelectorAll('#steps .step').forEach(s=>{s.classList.remove('now');s.classList.add('ok');}); }
