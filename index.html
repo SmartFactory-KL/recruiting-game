@@ -169,13 +169,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   #qrMini img{width:56px;height:56px}
   #qrMini span{font-size:.5rem}
 }
-a.qrInline{display:none}
-@media (max-width:1100px) and (min-height:501px), (max-width:540px), (max-height:500px) and (orientation:landscape){
+a.qrInSheet{display:none}
+@media (pointer:coarse) and (max-width:1100px), (max-width:540px), (max-height:500px) and (orientation:landscape){
   #qrMini{display:none!important}
-  a.qrInline{display:flex;flex:none;flex-direction:column;align-items:center;gap:1px;background:#fff;border-radius:9px;padding:4px 4px 2px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
-  a.qrInline img{width:58px;height:58px;display:block}
-  a.qrInline span{font-family:var(--display);font-weight:700;font-size:.5rem;color:#004f9f;line-height:1.1;white-space:nowrap}
-  #sheet .row:has(> a.qrInline){flex-wrap:nowrap;align-items:center}
+  a.qrInSheet{display:flex;position:absolute;top:10px;right:10px;z-index:3;flex-direction:column;align-items:center;gap:1px;background:#fff;border-radius:8px;padding:4px 4px 2px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  a.qrInSheet img{width:56px;height:56px;display:block}
+  a.qrInSheet span{font-family:var(--display);font-weight:700;font-size:.5rem;color:#004f9f;line-height:1.1;white-space:nowrap}
 }
 #aiNote{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:4;pointer-events:none;
   font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;color:var(--muted);background:rgba(20,27,34,.78);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
@@ -1424,10 +1423,11 @@ async function taskDone(){
 }
 { const src=document.querySelector('#apply .qr').src; document.querySelector('#qrMini img').src=src; }
 // on phones/tablets the small code sits right under the header; measure the header so they never overlap
+const NARROW_MQ=matchMedia('(max-width:1100px) and (min-height:501px), (max-width:540px), (max-height:500px) and (orientation:landscape)');
 function placeQrMini(){
   const q=document.getElementById('qrMini'); if(!q) return;
   q.style.top='';
-  if(getComputedStyle(q).bottom!=='auto' && getComputedStyle(q).top==='auto') return;   // desktop: bottom-right corner
+  if(!NARROW_MQ.matches) return;   // wide screens: bottom-right corner (set in CSS)
   const hb=document.getElementById('hud').getBoundingClientRect().bottom;
   const ai=document.getElementById('aiNote').getBoundingClientRect();
   let top=Math.round(hb)+4;
@@ -1437,17 +1437,43 @@ function placeQrMini(){
 addEventListener('resize',placeQrMini); addEventListener('orientationchange',()=>setTimeout(placeQrMini,300));
 if(window.ResizeObserver) new ResizeObserver(placeQrMini).observe(document.getElementById('hud'));
 placeQrMini(); setTimeout(placeQrMini,1500);
-// put a small, tappable application code next to the main button of the task panel (phones and tablets)
+// phones: a small, tappable application code in the top-right corner of the task panel.
+// Every text block beside it gets right padding, so the code never covers any text.
 const QR_SRC=document.querySelector('#apply .qr').src;
-function addInlineQr(){
-  const row=[...sheet.querySelectorAll('.row')].find(r=>r.querySelector(':scope > .btn:not(.ghost)'));
-  if(!row || row.querySelector('.qrInline')) return;
-  const a=document.createElement('a'); a.className='qrInline'; a.href='https://smartfactory.de/karriere/'; a.target='_blank'; a.rel='noopener';
-  a.setAttribute('aria-label','Jetzt bewerben: Karriereseite der SmartFactory KL');
-  a.innerHTML='<img alt="" src="'+QR_SRC+'"><span>Jetzt bewerben</span>';
-  row.appendChild(a);
+let qrBusy=false;
+function layoutSheetQr(){
+  if(qrBusy) return; qrBusy=true;
+  let a=sheet.querySelector(':scope > a.qrInSheet');
+  if(!a){ a=document.createElement('a'); a.className='qrInSheet'; a.href='https://smartfactory.de/karriere/'; a.target='_blank'; a.rel='noopener';
+    a.setAttribute('aria-label','Jetzt bewerben: Karriereseite der SmartFactory KL');
+    a.innerHTML='<img alt="" src="'+QR_SRC+'"><span>Jetzt bewerben</span>'; sheet.appendChild(a); }
+  const kids=[...sheet.children].filter(c=>c!==a);
+  kids.forEach(c=>{ c.style.paddingRight=''; c.querySelectorAll(':scope > i.qrSpace').forEach(x=>x.remove()); });
+  if(getComputedStyle(a).display!=='none'){
+    const pad=a.offsetWidth+10, bottom=a.offsetTop+a.offsetHeight+4;
+    // top to bottom: blocks that end beside the code get right padding;
+    // a text block that reaches below it flows around it (only its first lines get shorter)
+    kids.forEach(c=>{
+      if(c.offsetTop>=bottom || c.matches('.row:has(> .btn:not(.ghost))')) return;
+      if(c.offsetTop+c.offsetHeight<=bottom || !/^(P|H2)$/.test(c.tagName)){ c.style.paddingRight=pad+'px'; return; }
+      c.style.paddingRight=pad+'px';
+      if(c.offsetTop+c.offsetHeight<=bottom) return;           // fits beside the code once padded
+      c.style.paddingRight='';
+      const sp=document.createElement('i'); sp.className='qrSpace';
+      sp.style.cssText='float:right;display:block;width:'+pad+'px;height:'+Math.max(0,bottom-c.offsetTop)+'px'; c.prepend(sp);
+    });
+  }
+  qrBusy=false;
 }
-new MutationObserver(addInlineQr).observe(sheet,{childList:true}); addInlineQr();
+const ownNode=n=>n.nodeType===1 && (n.classList.contains('qrSpace')||n.classList.contains('qrInSheet'));
+let qrRaf=0;
+new MutationObserver(recs=>{
+  // ignore the changes this layout makes itself; react to new texts (task steps, hints, messages)
+  if(recs.every(r=>[...r.addedNodes,...r.removedNodes].every(ownNode))) return;
+  cancelAnimationFrame(qrRaf); qrRaf=requestAnimationFrame(layoutSheetQr);
+}).observe(sheet,{childList:true,subtree:true,characterData:true});
+addEventListener('resize',layoutSheetQr); addEventListener('orientationchange',()=>setTimeout(layoutSheetQr,300));
+layoutSheetQr();
 function showApply(){ if(G.phase!=='result') return; const a=$('#apply'); a.classList.add('on'); a.setAttribute('aria-hidden','false'); }
 function hideApply(){ const a=$('#apply'); a.classList.remove('on'); a.setAttribute('aria-hidden','true'); }
 function stepAll(){ document.querySelectorAll('#steps .step').forEach(s=>{s.classList.remove('now');s.classList.add('ok');}); }
