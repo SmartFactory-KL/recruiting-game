@@ -1415,6 +1415,20 @@ async function taskDone(){
   result();
 }
 { const src=document.querySelector('#apply .qr').src; document.querySelector('#qrMini img').src=src; }
+// on phones/tablets the small code sits right under the header; measure the header so they never overlap
+function placeQrMini(){
+  const q=document.getElementById('qrMini'); if(!q) return;
+  q.style.top='';
+  if(getComputedStyle(q).bottom!=='auto' && getComputedStyle(q).top==='auto') return;   // desktop: bottom-right corner
+  const hb=document.getElementById('hud').getBoundingClientRect().bottom;
+  const ai=document.getElementById('aiNote').getBoundingClientRect();
+  let top=Math.round(hb)+4;
+  if(SIDE_MQ.matches && ai.bottom>0 && ai.top<120) top=Math.max(top, Math.round(ai.bottom)+6);
+  q.style.top=top+'px';
+}
+addEventListener('resize',placeQrMini); addEventListener('orientationchange',()=>setTimeout(placeQrMini,300));
+if(window.ResizeObserver) new ResizeObserver(placeQrMini).observe(document.getElementById('hud'));
+placeQrMini(); setTimeout(placeQrMini,1500);
 function showApply(){ if(G.phase!=='result') return; const a=$('#apply'); a.classList.add('on'); a.setAttribute('aria-hidden','false'); }
 function hideApply(){ const a=$('#apply'); a.classList.remove('on'); a.setAttribute('aria-hidden','true'); }
 function stepAll(){ document.querySelectorAll('#steps .step').forEach(s=>{s.classList.remove('now');s.classList.add('ok');}); }
